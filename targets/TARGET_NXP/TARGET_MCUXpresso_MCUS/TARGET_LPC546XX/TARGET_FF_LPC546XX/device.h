@@ -26,7 +26,8 @@
 
 /* Defines used by the sleep code */
 #define LPC_CLOCK_INTERNAL_IRC BOARD_BootClockFRO12M
-#define LPC_CLOCK_RUN          BOARD_BootClockFROHF48M
+#define LPC_CLOCK_RUN          ((SYSCON->DEVICE_ID0 == 0xFFF54628) ?
+                                 BOARD_BootClockPLL220M() : BOARD_BootClockFROHF48M)
 
 #define DEVICE_ID_LENGTH       24
 
