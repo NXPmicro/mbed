@@ -98,6 +98,9 @@ void lp_ticker_set_interrupt(timestamp_t timestamp)
         lp_ticker_init();
     }
 
+    if (timestamp == 0) {
+        timestamp = 1;
+    }
     LPTMR_SetTimerPeriod(LPTMR0, timestamp);
     LPTMR_ClearStatusFlags(LPTMR0, kLPTMR_TimerCompareFlag);
     LPTMR_EnableInterrupts(LPTMR0, kLPTMR_TimerInterruptEnable);
