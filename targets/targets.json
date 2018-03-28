@@ -502,10 +502,10 @@
         "extra_labels": ["Freescale", "MCUXpresso_MCUS", "KSDK2_MCUS", "MCU_K22F", "MCU_K22F512", "FRDM", "KPSDK_MCUS", "KPSDK_CODE"],
         "is_disk_virtual": true,
         "public": false,
-        "macros": ["CPU_MK22FN512VLH12", "FSL_RTOS_MBED"],
+        "macros": ["CPU_MK22FN512VLH12", "FSL_RTOS_MBED", "MBED_TICKLESS"],
         "inherits": ["Target"],
         "detect_code": ["0231"],
-        "device_has": ["ANALOGIN", "ANALOGOUT", "I2C", "I2CSLAVE", "INTERRUPTIN", "PORTIN", "PORTINOUT", "PORTOUT", "PWMOUT", "RTC", "SERIAL", "SLEEP", "SPI", "SPISLAVE", "STDIO_MESSAGES", "TRNG"],
+        "device_has": ["USTICKER", "LPTICKER", "ANALOGIN", "ANALOGOUT", "I2C", "I2CSLAVE", "INTERRUPTIN", "PORTIN", "PORTINOUT", "PORTOUT", "PWMOUT", "RTC", "SERIAL", "SLEEP", "SPI", "SPISLAVE", "STDIO_MESSAGES", "TRNG"],
         "device_name": "MK22DN512xxx5"
     },
     "K22F": {
