@@ -30,9 +30,9 @@ void mbed_sdk_init()
     gpio_init_out_ex(&gpio, PTD14, 1);
 
     CLOCK_EnableClock(kCLOCK_Rtc0);
-
-     /* Check if the Rtc oscillator is enabled */
+    /* Check if the Rtc oscillator is enabled */
     if ((RTC->CR & RTC_CR_OSCE_MASK) == 0u) {
+        /* Setup the 32K RTC OSC */
         RTC_Init(RTC, &rtc_basic_config);
 
         /* Enable the RTC 32KHz oscillator */

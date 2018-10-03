@@ -15,7 +15,7 @@
  */
 #include "rtc_api.h"
 
-#if DEVICE_RTC || DEVICE_LPTICKER
+#if DEVICE_RTC && !defined(USE_EXTERNAL_RTC)
 
 #include "pinmap.h"
 #include "fsl_rtc.h"

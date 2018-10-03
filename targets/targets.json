@@ -725,7 +725,7 @@
         "mbed_rom_start": "0x00014000",
         "mbed_rom_size": "0xEC000",
         "detect_code": ["0228"],
-        "device_has": ["USTICKER", "LPTICKER", "ANALOGIN", "ANALOGOUT", "I2C", "I2CSLAVE", "INTERRUPTIN", "PORTIN", "PORTINOUT", "PORTOUT", "PWMOUT", "SERIAL", "SERIAL_ASYNCH", "SERIAL_FC", "SLEEP", "SPI", "SPI_ASYNCH", "SPISLAVE", "STDIO_MESSAGES", "TRNG", "FLASH"],
+        "device_has": ["USTICKER", "LPTICKER", "RTC", "ANALOGIN", "ANALOGOUT", "I2C", "I2CSLAVE", "INTERRUPTIN", "PORTIN", "PORTINOUT", "PORTOUT", "PWMOUT", "SERIAL", "SERIAL_ASYNCH", "SERIAL_FC", "SLEEP", "SPI", "SPI_ASYNCH", "SPISLAVE", "STDIO_MESSAGES", "TRNG", "FLASH"],
         "forced_reset_timeout": 7,
         "device_name": "MK64FN1M0xxx12",
         "bootloader_supported": true

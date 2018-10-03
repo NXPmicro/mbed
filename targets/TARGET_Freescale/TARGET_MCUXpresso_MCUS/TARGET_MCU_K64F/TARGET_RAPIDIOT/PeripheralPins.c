@@ -125,6 +125,7 @@ const PinMap PinMap_SPI_MISO[] = {
 };
 
 const PinMap PinMap_SPI_SSEL[] = {
+    {PTB9 , SPI_1, 2},
     {PTE4 , SPI_1, 2},
     {PTB20, SPI_2, 2},
     {PTC4 , SPI_0, 2},
