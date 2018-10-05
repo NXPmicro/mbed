@@ -19,6 +19,7 @@
 
 #include "pinmap.h"
 #include "spi_api.h"
+#include "gpio_api.h"
 #include "pcf2123.h"
 #include "mbed_wait_api.h"
 #include "mbed_mktime.h"
@@ -28,23 +29,62 @@ static bool rtc_time_set = false;
 static bool rtc_inited = false;
 /* RTC SPI */
 spi_t rtc_spi;
+gpio_t gpio_rtc;
+gpio_t gpio_cts;
+gpio_t gpio_rts;
+gpio_t gpio_rst;
+
+static void get_access_spi_bus(void)
+{
+    /* Indicate we wish to use the SPI bus */
+    gpio_write(&gpio_cts, 1);
+
+    /* If KW41 is running then wait for access to the SPI bus */
+    if (gpio_read(&gpio_rst)) {
+        while (gpio_read(&gpio_rts) != 0) {
+            wait(1);
+        }
+    }
+}
 
 static uint8_t rtc_spi_write(uint8_t *buf, uint32_t size)
 {
+    get_access_spi_bus();
+
+    // Assert the RTC chip select
+    gpio_write(&gpio_rtc, 1);
+
     // write the data
     for (uint32_t i = 0; i < size; i++) {
         spi_master_write(&rtc_spi, buf[i]);
     }
+
+    // De-assert the RTC chip select
+    gpio_write(&gpio_rtc, 0);
+
+    // Release access to the SPI bus
+    gpio_write(&gpio_cts, 0);
 
     return 0;
 }
 
 static uint8_t rtc_spi_read(uint8_t *writebuf, uint8_t *readbuf, uint32_t size)
 {
+    get_access_spi_bus();
+
+    // Assert the RTC chip select
+    gpio_write(&gpio_rtc, 1);
+
     // read the data
     for (uint32_t i = 0; i < size; i++) {
         readbuf[i] = spi_master_write(&rtc_spi, 0x0);
     }
+
+    // De-assert the RTC chip select
+    gpio_write(&gpio_rtc, 0);
+
+    // Release access to the SPI bus
+    gpio_write(&gpio_cts, 0);
 
     return 0;
 }
@@ -57,11 +97,16 @@ static void rtc_spi_DelayMilliseconds(uint32_t milliseconds)
 
 void rtc_init(void)
 {
+    gpio_init_out_ex(&gpio_rtc, PTB9, 0);  // Chip select sent to the RTC
+    gpio_init_out_ex(&gpio_cts, PTB27, 0); // Handshake signal CTS sent to KW41
+    gpio_init_in_ex(&gpio_rts, PTE26, PullNone); // Handshake signal RTS received from KW41
+    gpio_init_in_ex(&gpio_rst, PTB23, PullNone); // Check KW41 RST
+
     /* Initialize SPI for RTC */
-    spi_init(&rtc_spi, PTD6, PTD7, PTD5, PTB9);
+    spi_init(&rtc_spi, PTD6, PTD7, PTD5, NC);
     spi_format(&rtc_spi, 8, 0, 0);
     /* Set SPI Freq */
-    spi_frequency(&rtc_spi, 1000000);
+    spi_frequency(&rtc_spi, 5000000);
 
     pcf2123_IoFunc_t io;
     io.SPI_Write = rtc_spi_write;
