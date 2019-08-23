@@ -1352,12 +1352,14 @@
             "QSPI"
         ],
         "release_versions": ["2", "5"],
+        "components_add": ["QSPIF"],
         "device_name": "MKL82Z128xxx7"
     },
     "USENSE": {
         "inherits": ["KL82Z"],
         "extra_labels_remove": ["FRDM"],
         "device_has_remove": ["QSPI"],
+        "components_remove": ["QSPIF"],
         "supported_form_factors": []
     },
     "KW24D": {
