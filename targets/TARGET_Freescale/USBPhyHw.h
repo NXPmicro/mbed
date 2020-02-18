@@ -19,6 +19,10 @@
 
 #include "mbed.h"
 #include "USBPhy.h"
+#include "usb_device_config.h"
+#include "usb.h"
+#include "usb_device.h"
+#include "usb_device_ch9.h"
 
 
 class USBPhyHw : public USBPhy {
@@ -67,6 +71,10 @@ private:
 
 
     static void _usbisr(void);
+
+    friend usb_status_t USBPhy_DeviceCallback(usb_device_handle handle, uint32_t event, void *param);
+    friend usb_status_t USBPhy_EndpointCallback(usb_device_handle handle, usb_device_endpoint_callback_message_struct_t *message,
+                                                void *callbackParam);
 };
 
 #endif

@@ -2692,7 +2692,8 @@
             "SPISLAVE",
             "STDIO_MESSAGES",
             "TRNG",
-            "FLASH"
+            "FLASH",
+            "USBDEVICE"
         ],
         "release_versions": [
             "2",
