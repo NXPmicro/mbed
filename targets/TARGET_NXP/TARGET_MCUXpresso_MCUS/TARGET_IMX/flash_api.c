@@ -16,33 +16,20 @@
  */
 
 #include "flash_api.h"
-#include "mbed_toolchain.h"
-#include "mbed_critical.h"
 
 #if DEVICE_FLASH
 
 #include "fsl_flexspi.h"
-#include "fsl_cache.h"
 #include "flash_defines.h"
 
-AT_QUICKACCESS_SECTION_CODE(void flexspi_update_lut_ram(void));
-AT_QUICKACCESS_SECTION_CODE(status_t flexspi_nor_write_enable_ram(uint32_t baseAddr));
-AT_QUICKACCESS_SECTION_CODE(status_t flexspi_nor_wait_bus_busy_ram(void));
-AT_QUICKACCESS_SECTION_CODE(status_t flexspi_nor_flash_erase_sector_ram(uint32_t address));
-AT_QUICKACCESS_SECTION_CODE(static void flexspi_lower_clock_ram(void));
-AT_QUICKACCESS_SECTION_CODE(static void flexspi_clock_update_ram(void));
-AT_QUICKACCESS_SECTION_CODE(status_t flexspi_nor_flash_page_program_ram(uint32_t address,
-                                                                        const uint32_t *src,
-                                                                        uint32_t size));
-AT_QUICKACCESS_SECTION_CODE(void flexspi_nor_flash_read_data_ram(uint32_t addr,
-                                                                 uint32_t *buffer,
-                                                                 uint32_t size));
+static bool flash_inited = false;
 
-void flexspi_update_lut_ram(void)
+void flexspi_update_lut(void)
 {
     flexspi_config_t config;
 
-    memset(&config, 0, sizeof(config));
+    __asm("cpsid i");
+    SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;
 
     /*Get FLEXSPI default settings and configure the flexspi. */
     FLEXSPI_GetDefaultConfig(&config);
@@ -57,6 +44,8 @@ void flexspi_update_lut_ram(void)
     config.enableSckBDiffOpt = true;
     config.rxSampleClock     = kFLEXSPI_ReadSampleClkExternalInputFromDqsPad;
     config.enableCombination = true;
+    config.enableDoze = false;
+
     FLEXSPI_Init(FLEXSPI, &config);
 
     /* Configure flash settings according to serial flash feature. */
@@ -67,17 +56,14 @@ void flexspi_update_lut_ram(void)
 
     FLEXSPI_SoftwareReset(FLEXSPI);
 
-    /* Wait for bus idle. */
-    while (!FLEXSPI_GetBusIdleStatus(FLEXSPI)) {
-    }
+    __asm("cpsie i");
+    SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
 }
 
-status_t flexspi_nor_write_enable_ram(uint32_t baseAddr)
+status_t flexspi_nor_write_enable(uint32_t baseAddr)
 {
     flexspi_transfer_t flashXfer;
     status_t status = kStatus_Success;
-
-    memset(&flashXfer, 0, sizeof(flashXfer));
 
     /* Write enable */
     flashXfer.deviceAddress = baseAddr;
@@ -91,15 +77,13 @@ status_t flexspi_nor_write_enable_ram(uint32_t baseAddr)
     return status;
 }
 
-status_t flexspi_nor_wait_bus_busy_ram(void)
+status_t flexspi_nor_wait_bus_busy(void)
 {
     /* Wait status ready. */
     bool isBusy = false;
     uint32_t readValue = 0;
     status_t status = kStatus_Success;
     flexspi_transfer_t flashXfer;
-
-    memset(&flashXfer, 0, sizeof(flashXfer));
 
     flashXfer.deviceAddress = 0;
     flashXfer.port          = kFLEXSPI_PortA1;
@@ -126,24 +110,24 @@ status_t flexspi_nor_wait_bus_busy_ram(void)
             status = kStatus_Fail;
             break;
         }
-
     } while (isBusy);
 
     return status;
 
 }
 
-status_t flexspi_nor_flash_erase_sector_ram(uint32_t address)
+status_t flexspi_nor_flash_erase_sector(uint32_t address)
 {
     status_t status = kStatus_Success;
     flexspi_transfer_t flashXfer;
 
-    memset(&flashXfer, 0, sizeof(flashXfer));
+    __asm("cpsid i");
+    SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;
 
     /* Write enable */
-    status = flexspi_nor_write_enable_ram(address);
+    status = flexspi_nor_write_enable(address);
     if (status != kStatus_Success) {
-        return status;
+        goto exit_erase;
     }
 
     flashXfer.deviceAddress = address;
@@ -154,132 +138,133 @@ status_t flexspi_nor_flash_erase_sector_ram(uint32_t address)
 
     status = FLEXSPI_TransferBlocking(FLEXSPI, &flashXfer);
     if (status != kStatus_Success) {
-        return status;
+        goto exit_erase;
     }
 
-    status = flexspi_nor_wait_bus_busy_ram();
+    status = flexspi_nor_wait_bus_busy();
+
+    if (status != kStatus_Success) {
+        goto exit_erase;
+    }
 
     /* Do software reset. */
     FLEXSPI_SoftwareReset(FLEXSPI);
+
+    SCB_InvalidateDCache_by_Addr((void *)(address + FlexSPI_AMBA_BASE), BOARD_FLASH_SECTOR_SIZE);
+
+exit_erase:
+    __asm("cpsie i");
+    SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
+
+    /* Flush pipeline to allow pending interrupts take place
+     * before starting next loop */
+    __ISB();
 
     return status;
 }
 
-static void flexspi_lower_clock_ram(void)
-{
-    unsigned int reg = 0;
 
-    /* Wait for bus idle. */
-    while (!FLEXSPI_GetBusIdleStatus(FLEXSPI)) {
-    }
-
-    FLEXSPI_Enable(FLEXSPI, false);
-
-    /* Disable FlexSPI clock */
-    CCM->CCGR6 &= ~CCM_CCGR6_CG5_MASK;
-
-    /* flexspi clock 66M, DDR mode, internal clock 33M. */
-    reg = CCM->CSCMR1;
-    reg &= ~CCM_CSCMR1_FLEXSPI_PODF_MASK;
-    reg |= CCM_CSCMR1_FLEXSPI_PODF(3);
-    CCM->CSCMR1 = reg;
-
-    /* Enable FlexSPI clock */
-    CCM->CCGR6 |= CCM_CCGR6_CG5_MASK;
-
-    FLEXSPI_Enable(FLEXSPI, true);
-
-    /* Do software reset. */
-    FLEXSPI_SoftwareReset(FLEXSPI);
-
-    /* Wait for bus idle. */
-    while (!FLEXSPI_GetBusIdleStatus(FLEXSPI)) {
-    }
-}
-
-static void flexspi_clock_update_ram(void)
-{
-    /* Program finished, speed the clock to 133M. */
-    /* Wait for bus idle before change flash configuration. */
-    while (!FLEXSPI_GetBusIdleStatus(FLEXSPI)) {
-    }
-    FLEXSPI_Enable(FLEXSPI, false);
-    /* Disable FlexSPI clock */
-    CCM->CCGR6 &= ~CCM_CCGR6_CG5_MASK;
-
-    /* flexspi clock 260M, DDR mode, internal clock 130M. */
-    CCM->CSCMR1 &= ~CCM_CSCMR1_FLEXSPI_PODF_MASK;
-
-    /* Enable FlexSPI clock */
-    CCM->CCGR6 |= CCM_CCGR6_CG5_MASK;
-
-    FLEXSPI_Enable(FLEXSPI, true);
-
-    /* Do software reset. */
-    FLEXSPI_SoftwareReset(FLEXSPI);
-
-    /* Wait for bus idle. */
-    while (!FLEXSPI_GetBusIdleStatus(FLEXSPI)) {
-    }
-}
-
-status_t flexspi_nor_flash_page_program_ram(uint32_t address, const uint32_t *src, uint32_t size)
+status_t flexspi_nor_flash_page_program(uint32_t address, const uint32_t *src)
 {
     status_t status = kStatus_Success;
     flexspi_transfer_t flashXfer;
-    uint32_t offset = 0;
 
-    memset(&flashXfer, 0, sizeof(flashXfer));
+    __asm("cpsid i");
+    SysTick->CTRL &= ~SysTick_CTRL_ENABLE_Msk;
 
-    flexspi_lower_clock_ram();
+    FLEXSPI_Enable(FLEXSPI, false);
+    CCM->CCGR6 &= ~CCM_CCGR6_CG5_MASK;
 
-    while (size > 0) {
-        /* Write enable */
-        status = flexspi_nor_write_enable_ram(address + offset);
+    /* The clock should be max 50MHz during programming */
+    /* Backup of CCM_ANALOG_PFD_480 register */
+    uint32_t pfd480;
+    pfd480 = CCM_ANALOG->PFD_480;
+    /* Disable the clock output first */
+    CCM_ANALOG->PFD_480 |= CCM_ANALOG_PFD_480_PFD0_CLKGATE_MASK;
+    /* Set value of PFD0_FRAC to 26 - clock 332MHz */
+    CCM_ANALOG->PFD_480 &= ~CCM_ANALOG_PFD_480_PFD0_FRAC_MASK;
+    CCM_ANALOG->PFD_480 |= CCM_ANALOG_PFD_480_PFD0_FRAC(26);
+    /* Enable output */
+    CCM_ANALOG->PFD_480 &= ~CCM_ANALOG_PFD_480_PFD0_CLKGATE_MASK;
 
-        if (status != kStatus_Success) {
-            return status;
-        }
+    /* Backup of CCM_CSCMR1 register */
+    uint32_t cscmr1;
+    cscmr1 = CCM->CSCMR1;
+    /* Set value of FLEXSPI_CLK_SEL to 3 - derive clock from PLL3 PFD0 */
+    CCM->CSCMR1 |= CCM_CSCMR1_FLEXSPI_CLK_SEL(3);
+    /* Set value of FLEXSPI_PODF to 3 - divide by 4, flexspi clock 83MHz, in DDR mode is half clock frequency on SCK - 42MHz */
+    CCM->CSCMR1 &= ~CCM_CSCMR1_FLEXSPI_PODF_MASK;
+    CCM->CSCMR1 |= CCM_CSCMR1_FLEXSPI_PODF(3);
 
-        /* Prepare page program command */
-        flashXfer.deviceAddress = address + offset;
-        flashXfer.port          = kFLEXSPI_PortA1;
-        flashXfer.cmdType       = kFLEXSPI_Write;
-        flashXfer.SeqNumber     = 2;
-        flashXfer.seqIndex      = HYPERFLASH_CMD_LUT_SEQ_IDX_PAGEPROGRAM;
-        flashXfer.data          = (uint32_t *)(src + offset);
-        flashXfer.dataSize      = BOARD_FLASH_PAGE_SIZE;
+    CCM->CCGR6 |= CCM_CCGR6_CG5_MASK;
 
-        status = FLEXSPI_TransferBlocking(FLEXSPI, &flashXfer);
+    FLEXSPI_Enable(FLEXSPI, true);
 
-        if (status != kStatus_Success) {
-            return status;
-        }
+    /* Do software reset. */
+    FLEXSPI_SoftwareReset(FLEXSPI);
 
-        status = flexspi_nor_wait_bus_busy_ram();
+    /* Write enable */
+    status = flexspi_nor_write_enable(address);
 
-        if (status != kStatus_Success) {
-            return status;
-        }
-
-        size -= BOARD_FLASH_PAGE_SIZE;
-        offset += BOARD_FLASH_PAGE_SIZE;
+    if (status != kStatus_Success) {
+        goto exit_program;
     }
 
-    flexspi_clock_update_ram();
+    /* Prepare page program command */
+    flashXfer.deviceAddress = address;
+    flashXfer.port          = kFLEXSPI_PortA1;
+    flashXfer.cmdType       = kFLEXSPI_Write;
+    flashXfer.SeqNumber     = 2;
+    flashXfer.seqIndex      = HYPERFLASH_CMD_LUT_SEQ_IDX_PAGEPROGRAM;
+    flashXfer.data          = (uint32_t *)(src);
+    flashXfer.dataSize      = BOARD_FLASH_PAGE_SIZE;
+
+    status = FLEXSPI_TransferBlocking(FLEXSPI, &flashXfer);
+
+    if (status != kStatus_Success) {
+        goto exit_program;
+    }
+
+    status = flexspi_nor_wait_bus_busy();
+
+    if (status != kStatus_Success) {
+        goto exit_program;
+    }
+
+    FLEXSPI_Enable(FLEXSPI, false);
+    CCM->CCGR6 &= ~CCM_CCGR6_CG5_MASK;
+
+    /* Return back the changes in clocks */
+    CCM_ANALOG->PFD_480 = pfd480;
+    CCM->CSCMR1 = cscmr1;
+
+    CCM->CCGR6 |= CCM_CCGR6_CG5_MASK;
+
+    FLEXSPI_Enable(FLEXSPI, true);
+
+    /* Do software reset. */
+    FLEXSPI_SoftwareReset(FLEXSPI);
+
+    SCB_InvalidateDCache_by_Addr((void *)(address + FlexSPI_AMBA_BASE), BOARD_FLASH_PAGE_SIZE);
+
+exit_program:
+    __asm("cpsie i");
+    SysTick->CTRL |= SysTick_CTRL_ENABLE_Msk;
+
+    /* Flush pipeline to allow pending interrupts take place
+     * before starting next loop */
+    __ISB();
 
     return status;
-}
-
-void flexspi_nor_flash_read_data_ram(uint32_t addr, uint32_t *buffer, uint32_t size)
-{
-    memcpy(buffer, (void *)addr, size);
 }
 
 int32_t flash_init(flash_t *obj)
 {
-    flexspi_update_lut_ram();
+    if (!flash_inited) {
+        flexspi_update_lut();
+    }
 
+    flash_inited = true;
     return 0;
 }
 
@@ -288,17 +273,11 @@ int32_t flash_erase_sector(flash_t *obj, uint32_t address)
     status_t status = kStatus_Success;
     int32_t ret = 0;
 
-    core_util_critical_section_enter();
-
-    status = flexspi_nor_flash_erase_sector_ram(address - FlexSPI_AMBA_BASE);
+    status = flexspi_nor_flash_erase_sector(address - FlexSPI_AMBA_BASE);
 
     if (status != kStatus_Success) {
         ret = -1;
-    } else {
-        DCACHE_InvalidateByRange(address, BOARD_FLASH_SECTOR_SIZE);
     }
-
-    core_util_critical_section_exit();
 
     return ret;
 }
@@ -306,28 +285,23 @@ int32_t flash_erase_sector(flash_t *obj, uint32_t address)
 int32_t flash_program_page(flash_t *obj, uint32_t address, const uint8_t *data, uint32_t size)
 {
     status_t status = kStatus_Success;
+    uint32_t offset = 0;
     int32_t ret = 0;
 
-    core_util_critical_section_enter();
+    while (size > 0) {
+        status = flexspi_nor_flash_page_program(address + offset - FlexSPI_AMBA_BASE,
+                                                    (uint32_t *)(data + offset));
 
-    status = flexspi_nor_flash_page_program_ram(address - FlexSPI_AMBA_BASE, (uint32_t *)data, size);
+        if (status != kStatus_Success) {
+            ret = -1;
+            break;
+        }
 
-    if (status != kStatus_Success) {
-        ret = -1;
-    } else {
-        DCACHE_InvalidateByRange(address, size);
+        size -= BOARD_FLASH_PAGE_SIZE;
+        offset += BOARD_FLASH_PAGE_SIZE;
     }
 
-    core_util_critical_section_exit();
-
     return ret;
-}
-
-int32_t flash_read(flash_t *obj, uint32_t address, uint8_t *data, uint32_t size)
-{
-    flexspi_nor_flash_read_data_ram(address, (uint32_t *)data, size);
-
-    return 0;
 }
 
 int32_t flash_free(flash_t *obj)

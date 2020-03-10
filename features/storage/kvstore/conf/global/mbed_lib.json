@@ -46,6 +46,9 @@
         },
         "ARM_MUSCA_B1_S": {
             "storage_type": "TDB_INTERNAL"
+        },
+        "MIMXRT1050_EVK": {
+            "storage_type": "TDB_INTERNAL"
         }
     }
 }

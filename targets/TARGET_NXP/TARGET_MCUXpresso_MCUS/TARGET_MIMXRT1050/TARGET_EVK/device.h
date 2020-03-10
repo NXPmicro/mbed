@@ -20,8 +20,8 @@
 
 #define DEVICE_ID_LENGTH       24
 /* 4MB reserved for mbed-os */
-#define BOARD_FLASH_SIZE             (0x3C00000U)
-#define BOARD_FLASH_START_ADDR       (0x60400000U)
+#define BOARD_FLASH_SIZE             (0x4000000UL)
+#define BOARD_FLASH_START_ADDR       (0x60000000UL)
 
 #define BOARD_FLASH_PAGE_SIZE        (512)
 #define BOARD_FLASH_SECTOR_SIZE      (262144)
