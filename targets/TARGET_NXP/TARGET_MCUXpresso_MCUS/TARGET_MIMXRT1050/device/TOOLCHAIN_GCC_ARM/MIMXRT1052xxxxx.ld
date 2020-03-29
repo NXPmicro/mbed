@@ -96,8 +96,18 @@ SECTIONS
   .text :
   {
     . = ALIGN(8);
-    *(.text)                 /* .text sections (code) */
-    *(.text*)                /* .text* sections (code) */
+    *(EXCLUDE_FILE(
+        /* Exclude flash and frequently executed functions from XIP */
+        */flash_api.o
+        */fsl_flexspi.o
+        */fsl_clock.o
+    ) .text)                 /* .text sections (code) */
+    *(EXCLUDE_FILE(
+        /* Exclude flash and frequently executed functions from XIP */
+        */flash_api.o
+        */fsl_flexspi.o
+        */fsl_clock.o
+    ) .text*)                /* .text* sections (code) */
     *(.rodata)               /* .rodata sections (constants, strings, etc.) */
     *(.rodata*)              /* .rodata* sections (constants, strings, etc.) */
     *(.glue_7)               /* glue arm to thumb code */
@@ -201,6 +211,10 @@ SECTIONS
     __DATA_RAM = .;
     __data_start__ = .;      /* create a global symbol at data start */
     *(m_usb_dma_init_data)
+    /* Explicit placement of flash and frequently executed functions in RAM */
+    */flash_api.o
+    */fsl_flexspi.o
+    */fsl_clock.o
     *(.data)                 /* .data sections */
     *(.data*)                /* .data* sections */
     KEEP(*(.jcr*))

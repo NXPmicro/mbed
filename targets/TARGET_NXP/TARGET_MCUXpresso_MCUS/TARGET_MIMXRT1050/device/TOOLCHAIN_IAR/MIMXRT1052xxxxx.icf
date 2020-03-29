@@ -112,7 +112,13 @@ define block ZI        with alignment = 32  { first  zi, section m_usb_dma_nonin
 define block NCACHE_VAR with size = 0x200000 , alignment = 0x100000  { section NonCacheable , section NonCacheable.init };
 define block QACCESS_FUNC {section .textrw};
 
-initialize by copy { readwrite };
+initialize by copy {
+  readwrite,
+  /* Place in RAM flash and performance dependent functions */
+  object flash_api.o,
+  object fsl_flexspi.o,
+  object fsl_clock.o
+};
 do not initialize  { section .noinit };
 
 place at address mem: m_interrupts_start    { readonly section .intvec };

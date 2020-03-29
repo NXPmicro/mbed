@@ -117,6 +117,10 @@ LR_IROM1 m_flash_config_start m_text_start+m_text_size-m_flash_config_start {   
 #endif
   RW_m_data m_data_start m_data_size { ; RW data
     .ANY (+RW +ZI)
+    /* Necessary to run flash routines from SRAM */
+    flash_api.o (+RO +RW +ZI)
+    fsl_flexspi.o (+RO +RW +ZI)
+    fsl_clock.o (+RO +RW +ZI)
     *(m_usb_dma_init_data)
     *(m_usb_dma_noninit_data)
   }
