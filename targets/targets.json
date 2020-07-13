@@ -4339,6 +4339,85 @@
             "5"
         ]
     },
+    "LPC55S69": {
+        "public": false,
+        "inherits": [
+            "PSA_V8_M"
+        ],
+        "default_toolchain": "ARMC6",
+        "features_add": [
+            "EXPERIMENTAL_API"
+        ],
+        "forced_reset_timeout": 20,
+        "release_versions": [
+            "5"
+        ],
+        "core": "Cortex-M33-NS",
+        "supported_toolchains": [
+            "ARMC6",
+            "GCC_ARM"
+        ],
+        "device_has_add": [
+            "USTICKER",
+            "RTC",
+            "ANALOGIN",
+            "I2C",
+            "I2CSLAVE",
+            "INTERRUPTIN",
+            "PORTIN",
+            "PORTINOUT",
+            "PORTOUT",
+            "SERIAL",
+            "SERIAL_FC",
+            "SLEEP",
+            "SPI",
+            "SPISLAVE",
+            "FLASH",
+            "STDIO_MESSAGES"
+        ],
+        "macros_add": [
+            "__STARTUP_CLEAR_BSS",
+            "MBED_FAULT_HANDLER_DISABLED",
+            "CMSIS_NVIC_VIRTUAL",
+            "MBED_MPU_CUSTOM",
+            "NXP_LPADC",
+            "MBED_TICKLESS",
+            "BL2"
+        ],
+        "extra_labels_add": [
+            "NXP",
+            "MCUXpresso_MCUS",
+            "LPC"
+        ],
+        "device_name": "LPC55S69JBD100",
+        "program_cycle_s": 10,
+        "post_binary_hook": {
+            "function": "LPC55S69Code.binary_hook"
+        },
+        "secure_image_filename": "tfm_s.bin",
+        "tfm_target_name": "LPC55S69",
+        "tfm_bootloader_supported": true,
+        "tfm_default_toolchain": "GNUARM",
+        "tfm_supported_toolchains": [
+            "GNUARM"
+        ],
+        "tfm_delivery_dir": "TARGET_NXP/TARGET_MCUXpresso_MCUS/TARGET_LPC55S69",
+        "OUTPUT_EXT": "hex"
+    },
+    "LPC55S69_NS": {
+        "inherits": [
+            "LPC55S69"
+        ]
+        "supported_form_factors": [
+            "ARDUINO"
+        ],
+        "extra_labels_add": [
+            "LPCXpresso",
+        ],
+        "detect_code": [
+            "5004"
+        ]
+    },
     "ARM_MPS2_Target": {
         "inherits": [
             "Target"
