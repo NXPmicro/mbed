@@ -4381,8 +4381,7 @@
             "CMSIS_NVIC_VIRTUAL",
             "MBED_MPU_CUSTOM",
             "NXP_LPADC",
-            "MBED_TICKLESS",
-            "BL2"
+            "MBED_TICKLESS"
         ],
         "extra_labels_add": [
             "NXP",
@@ -4407,12 +4406,12 @@
     "LPC55S69_NS": {
         "inherits": [
             "LPC55S69"
-        ]
+        ],
         "supported_form_factors": [
             "ARDUINO"
         ],
         "extra_labels_add": [
-            "LPCXpresso",
+            "LPCXpresso"
         ],
         "detect_code": [
             "5004"
