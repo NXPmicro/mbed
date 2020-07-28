@@ -4395,7 +4395,7 @@
         },
         "secure_image_filename": "tfm_s.bin",
         "tfm_target_name": "LPC55S69",
-        "tfm_bootloader_supported": true,
+        "tfm_bootloader_supported": false,
         "tfm_default_toolchain": "GNUARM",
         "tfm_supported_toolchains": [
             "GNUARM"
